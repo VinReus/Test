@@ -1,9 +1,13 @@
 import os
 from telegram import Update
-from telegram.ext import ApplicationBuilder, MessageHandler, CommandHandler, ContextTypes, filters
-
-TOKEN = os.environ["BOT_TOKEN"]
-APP_URL = os.environ["APP_URL"]  # es. https://nome-bot.onrender.com
+from telegram.ext import (
+    ApplicationBuilder,
+    CommandHandler,
+    ContextTypes,
+    MessageHandler,
+    filters,
+)
+from aiohttp import web
 
 GIF_URL = "https://media.giphy.com/media/ASd0Ukj0y3qMM/giphy.gif"
 
@@ -19,25 +23,42 @@ async def handle_bro(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_pika(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Pikachu! ⚡")
 
-async def start_webhook():
-    application = ApplicationBuilder().token(TOKEN).build()
+async def start_bot():
+    TOKEN = os.environ["BOT_TOKEN"]
+    APP_URL = os.environ["APP_URL"]
 
-    # Handlers
-    application.add_handler(CommandHandler("pika", handle_pika))
-    application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_buongiorno))
-    application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_bro))
+    app = ApplicationBuilder().token(TOKEN).build()
 
-    # Webhook
-    await application.initialize()
-    await application.start()
-    await application.bot.set_webhook(f"{APP_URL}/webhook")
-    await application.updater.start_webhook(
-        listen="0.0.0.0",
-        port=int(os.environ.get("PORT", 10000)),
-        url_path="webhook",
-        webhook_url=f"{APP_URL}/webhook",
-    )
+    app.add_handler(CommandHandler("pika", handle_pika))
+    app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_buongiorno))
+    app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_bro))
+
+    async def webhook_handler(request):
+        data = await request.json()
+        update = Update.de_json(data, app.bot)
+        await app.update_queue.put(update)
+        return web.Response()
+
+    async def on_startup(app_):
+        await app.bot.set_webhook(f"{APP_URL}/webhook")
+
+    web_app = web.Application()
+    web_app.add_routes([web.post("/webhook", webhook_handler)])
+    web_app.on_startup.append(on_startup)
+
+    await app.initialize()
+    await app.start()
+    runner = web.AppRunner(web_app)
+    await runner.setup()
+    site = web.TCPSite(runner, "0.0.0.0", int(os.environ.get("PORT", 10000)))
+    await site.start()
+
+    print("Bot in ascolto su /webhook...")
+
+    # Rimani attivo
+    await app.updater.start_polling()  # oppure await asyncio.Event().wait() per tenerlo attivo
 
 import asyncio
 if __name__ == '__main__':
-    asyncio.run(start_webhook())
+    asyncio.run(start_bot())
+    
