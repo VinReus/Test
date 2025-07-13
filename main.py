@@ -16,9 +16,9 @@ async def handle_buongiorno(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_animation(GIF_URL)
 
 async def handle_bro(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.message.text.lower() == "bro":
+    if update.message and update.message.text.lower() == "bro":
         with open("bro.jpg", "rb") as photo:
-            await update.message.reply_photo(photo)
+            await context.bot.send_photo(chat_id=update.effective_chat.id, photo=photo)
 
 async def handle_pika(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Pikachu! ⚡")
