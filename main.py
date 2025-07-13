@@ -17,7 +17,7 @@ async def handle_buongiorno(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def handle_bro(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.text.lower() == "bro":
-        with open("gaetanoamabile_14040423_232615864.jpg", "rb") as photo:
+        with open("bro.jpg", "rb") as photo:
             await update.message.reply_photo(photo)
 
 async def handle_pika(update: Update, context: ContextTypes.DEFAULT_TYPE):
